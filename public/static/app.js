@@ -4,6 +4,8 @@ let extras = [];
 let cart = [];
 let beverageCount = 0;
 let currentCategory = 'hamburguesas';
+let filteredMenu = [];
+let searchTerm = '';
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
@@ -37,11 +39,15 @@ function setupEventListeners() {
   document.querySelectorAll('.category-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.category-btn').forEach(b => {
-        b.className = b.className.replace('bg-red-500 text-white', 'bg-gray-200 text-gray-700');
+        b.className = b.className.replace('bg-orange-500 text-white', 'bg-gray-600 text-gray-300');
       });
-      this.className = this.className.replace('bg-gray-200 text-gray-700', 'bg-red-500 text-white');
+      this.className = this.className.replace('bg-gray-600 text-gray-300', 'bg-orange-500 text-white');
       
       currentCategory = this.dataset.category;
+      
+      // Clear search when changing category
+      clearSearch();
+      
       renderMenu();
     });
   });
@@ -85,83 +91,83 @@ function setupEventListeners() {
   // Modal controls
   document.getElementById('close-modal').addEventListener('click', closeModal);
   document.getElementById('send-whatsapp').addEventListener('click', sendWhatsApp);
+  
+  // Search functionality
+  document.getElementById('search-input').addEventListener('input', handleSearch);
+  document.getElementById('clear-search').addEventListener('click', clearSearch);
+}
+
+// Handle search functionality
+function handleSearch(event) {
+  searchTerm = event.target.value.toLowerCase().trim();
+  const clearButton = document.getElementById('clear-search');
+  
+  if (searchTerm.length > 0) {
+    clearButton.classList.remove('hidden');
+    // Search across all categories
+    filteredMenu = menu.filter(item => 
+      item.name.toLowerCase().includes(searchTerm) ||
+      item.base_ingredients.toLowerCase().includes(searchTerm)
+    );
+    renderSearchResults();
+  } else {
+    clearButton.classList.add('hidden');
+    filteredMenu = [];
+    renderMenu();
+  }
+}
+
+// Clear search
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('clear-search').classList.add('hidden');
+  searchTerm = '';
+  filteredMenu = [];
+  renderMenu();
+}
+
+// Render search results
+function renderSearchResults() {
+  const container = document.getElementById('menu-container');
+  
+  if (filteredMenu.length === 0) {
+    container.innerHTML = '<div class="text-center text-gray-400 py-8"><p>No se encontraron productos con "' + searchTerm + '"</p></div>';
+    return;
+  }
+  
+  const html = `
+    <div class="mb-4 text-center">
+      <p class="text-orange-400 font-semibold">📍 Resultados de búsqueda para "${searchTerm}" (${filteredMenu.length} productos)</p>
+    </div>
+    ${filteredMenu.map(item => generateMenuItemHTML(item)).join('')}
+  `;
+  
+  container.innerHTML = html;
+  
+  // Add event listeners to checkboxes
+  container.querySelectorAll('.extra-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', () => updateItemPrice(checkbox.dataset.itemId));
+  });
 }
 
 // Render menu items for current category
 function renderMenu() {
   const container = document.getElementById('menu-container');
-  const categoryItems = menu.filter(item => item.category === currentCategory);
   
-  if (categoryItems.length === 0) {
-    container.innerHTML = '<div class="text-center text-gray-500 py-8"><p>No hay productos en esta categoría</p></div>';
+  // If there's a search active, show search results instead
+  if (searchTerm.length > 0) {
+    renderSearchResults();
     return;
   }
   
-  const html = categoryItems.map(item => `
-    <div class="bg-gray-50 rounded-lg p-4 border hover:shadow-md transition">
-      <div class="flex justify-between items-start mb-3">
-        <div class="flex-1">
-          <h3 class="font-bold text-lg text-gray-800">${item.name}</h3>
-          <p class="text-sm text-gray-600 mb-2">${item.base_ingredients}</p>
-          <p class="font-bold text-red-600 text-lg">$${item.base_price}</p>
-        </div>
-      </div>
-      
-      <div class="space-y-3">
-        <!-- Extras Section -->
-        <div>
-          <h4 class="font-semibold text-sm mb-2">🍖 Ingredientes Extra:</h4>
-          <div class="grid grid-cols-2 gap-2 text-sm" id="extras-${item.id}">
-            ${getExtrasForCategory('extra').map(extra => `
-              <label class="flex items-center space-x-1">
-                <input type="checkbox" class="extra-checkbox" data-item-id="${item.id}" data-extra-id="${extra.id}" data-price="${extra.price}">
-                <span>${extra.name} (+$${extra.price})</span>
-              </label>
-            `).join('')}
-          </div>
-        </div>
-        
-        <!-- Vegetables Section -->
-        <div>
-          <h4 class="font-semibold text-sm mb-2">🥬 Verduras (incluidas):</h4>
-          <div class="grid grid-cols-2 gap-2 text-sm" id="vegetables-${item.id}">
-            ${getExtrasForCategory('vegetable').map(veggie => `
-              <label class="flex items-center space-x-1">
-                <input type="checkbox" class="vegetable-checkbox" data-item-id="${item.id}" data-extra-id="${veggie.id}" checked>
-                <span>${veggie.name}</span>
-              </label>
-            `).join('')}
-          </div>
-        </div>
-        
-        <!-- Sauces Section -->
-        <div>
-          <h4 class="font-semibold text-sm mb-2">🥄 Aderezos (incluidos):</h4>
-          <div class="grid grid-cols-2 gap-2 text-sm" id="sauces-${item.id}">
-            ${getExtrasForCategory('sauce').map(sauce => `
-              <label class="flex items-center space-x-1">
-                <input type="checkbox" class="sauce-checkbox" data-item-id="${item.id}" data-extra-id="${sauce.id}" checked>
-                <span>${sauce.name}</span>
-              </label>
-            `).join('')}
-          </div>
-        </div>
-        
-        <!-- Quantity and Add Button -->
-        <div class="flex items-center justify-between pt-3 border-t">
-          <div class="flex items-center space-x-3">
-            <span class="font-semibold">Cantidad:</span>
-            <button class="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600" onclick="changeQuantity(${item.id}, -1)">-</button>
-            <span class="font-bold text-lg w-8 text-center" id="quantity-${item.id}">1</span>
-            <button class="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-green-600" onclick="changeQuantity(${item.id}, 1)">+</button>
-          </div>
-          <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition" onclick="addToCart(${item.id})">
-            🛒 Agregar
-          </button>
-        </div>
-      </div>
-    </div>
-  `).join('');
+  const categoryItems = menu.filter(item => item.category === currentCategory);
+  
+  if (categoryItems.length === 0) {
+    container.innerHTML = '<div class="text-center text-gray-400 py-8"><p>No hay productos en esta categoría</p></div>';
+    return;
+  }
+  
+  const html = categoryItems.map(item => generateMenuItemHTML(item)).join('');
   
   container.innerHTML = html;
   
@@ -171,9 +177,88 @@ function renderMenu() {
   });
 }
 
+// Generate HTML for a menu item
+function generateMenuItemHTML(item) {
+  return `
+    <div class="bg-gray-700 border border-gray-600 rounded-lg p-4 hover:bg-gray-600 transition">
+      <div class="flex justify-between items-start mb-3">
+        <div class="flex-1">
+          <h3 class="font-bold text-lg text-white">${item.name}</h3>
+          <p class="text-sm text-gray-300 mb-2">${item.base_ingredients}</p>
+          <p class="font-bold text-orange-400 text-lg">$${item.base_price}</p>
+        </div>
+      </div>
+      
+      <div class="space-y-3">
+        <!-- Extras Section - Collapsible -->
+        <div>
+          <button class="w-full text-left font-semibold text-sm mb-2 bg-orange-600 text-white p-2 rounded flex items-center justify-between hover:bg-orange-500 transition" onclick="toggleExtras(${item.id})">
+            <span>🍖 Agregar Ingredientes Extra (Opcional)</span>
+            <span id="extras-arrow-${item.id}" class="transform transition-transform">▼</span>
+          </button>
+          <div id="extras-container-${item.id}" class="hidden grid grid-cols-2 gap-2 text-sm p-2 bg-gray-600 border border-gray-500 rounded">
+            ${getExtrasForCategory('extra').map(extra => `
+              <label class="flex items-center space-x-1 text-gray-300">
+                <input type="checkbox" class="extra-checkbox accent-orange-500" data-item-id="${item.id}" data-extra-id="${extra.id}" data-price="${extra.price}">
+                <span>${extra.name} (+$${extra.price})</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        
+        <!-- Vegetables and Sauces Combined -->
+        <div class="bg-green-700 p-3 rounded border border-green-600">
+          <h4 class="font-semibold text-sm mb-2 text-green-200">🥬 Verduras y Aderezos (Incluidos - puedes quitar los que no desees):</h4>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            ${getExtrasForCategory('vegetable').map(veggie => `
+              <label class="flex items-center space-x-1 text-green-200">
+                <input type="checkbox" class="vegetable-checkbox accent-green-500" data-item-id="${item.id}" data-extra-id="${veggie.id}" checked>
+                <span>${veggie.name}</span>
+              </label>
+            `).join('')}
+            ${getExtrasForCategory('sauce').map(sauce => `
+              <label class="flex items-center space-x-1 text-green-200">
+                <input type="checkbox" class="sauce-checkbox accent-green-500" data-item-id="${item.id}" data-extra-id="${sauce.id}" checked>
+                <span>${sauce.name}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        
+        <!-- Quantity and Add Button -->
+        <div class="flex items-center justify-between pt-3 border-t border-gray-600">
+          <div class="flex items-center space-x-3">
+            <span class="font-semibold text-gray-300">Cantidad:</span>
+            <button class="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600" onclick="changeQuantity(${item.id}, -1)">-</button>
+            <span class="font-bold text-lg w-8 text-center text-white" id="quantity-${item.id}">1</span>
+            <button class="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-green-600" onclick="changeQuantity(${item.id}, 1)">+</button>
+          </div>
+          <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition" onclick="addToCart(${item.id})">
+            🛒 Agregar
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // Get extras by category
 function getExtrasForCategory(category) {
   return extras.filter(extra => extra.category === category);
+}
+
+// Toggle extras section
+function toggleExtras(itemId) {
+  const container = document.getElementById(`extras-container-${itemId}`);
+  const arrow = document.getElementById(`extras-arrow-${itemId}`);
+  
+  if (container.classList.contains('hidden')) {
+    container.classList.remove('hidden');
+    arrow.style.transform = 'rotate(180deg)';
+  } else {
+    container.classList.add('hidden');
+    arrow.style.transform = 'rotate(0deg)';
+  }
 }
 
 // Change quantity for menu item
@@ -251,6 +336,14 @@ function addToCart(itemId) {
   document.querySelectorAll(`input[data-item-id="${itemId}"].extra-checkbox`).forEach(cb => cb.checked = false);
   document.querySelectorAll(`input[data-item-id="${itemId}"].vegetable-checkbox`).forEach(cb => cb.checked = true);
   document.querySelectorAll(`input[data-item-id="${itemId}"].sauce-checkbox`).forEach(cb => cb.checked = true);
+  
+  // Collapse extras section
+  const extrasContainer = document.getElementById(`extras-container-${itemId}`);
+  const extrasArrow = document.getElementById(`extras-arrow-${itemId}`);
+  if (extrasContainer) {
+    extrasContainer.classList.add('hidden');
+    extrasArrow.style.transform = 'rotate(0deg)';
+  }
 }
 
 // Update cart display
@@ -271,18 +364,17 @@ function updateCart() {
   // Cart items
   cart.forEach((item, index) => {
     html += `
-      <div class="border-b pb-3 mb-3">
+      <div class="border-b border-gray-600 pb-3 mb-3">
         <div class="flex justify-between items-start">
           <div class="flex-1">
-            <h4 class="font-semibold">${item.quantity}x ${item.menu_item.name}</h4>
-            <p class="text-sm text-gray-600">${item.menu_item.base_ingredients}</p>
-            ${item.extras.length > 0 ? `<p class="text-xs text-blue-600">+ ${item.extras.map(e => e.name).join(', ')}</p>` : ''}
-            ${item.vegetables.length > 0 ? `<p class="text-xs text-green-600">🥬 ${item.vegetables.map(v => v.name).join(', ')}</p>` : ''}
-            ${item.sauces.length > 0 ? `<p class="text-xs text-orange-600">🥄 ${item.sauces.map(s => s.name).join(', ')}</p>` : ''}
+            <h4 class="font-semibold text-white">${item.quantity}x ${item.menu_item.name}</h4>
+            <p class="text-sm text-gray-400">${item.menu_item.base_ingredients}</p>
+            ${item.extras.length > 0 ? `<p class="text-xs text-orange-400 font-medium">+ Extras: ${item.extras.map(e => e.name).join(', ')}</p>` : ''}
+            ${(item.vegetables.length > 0 || item.sauces.length > 0) ? `<p class="text-xs text-green-400">🥬 ${[...item.vegetables.map(v => v.name), ...item.sauces.map(s => s.name)].join(', ')}</p>` : ''}
           </div>
           <div class="text-right">
-            <p class="font-bold">$${item.total_price}</p>
-            <button class="text-red-500 text-sm hover:text-red-700" onclick="removeFromCart(${index})">
+            <p class="font-bold text-orange-400">$${item.total_price}</p>
+            <button class="text-red-400 text-sm hover:text-red-300" onclick="removeFromCart(${index})">
               🗑️ Quitar
             </button>
           </div>
@@ -296,10 +388,10 @@ function updateCart() {
   if (beverageCount > 0) {
     const beverageTotal = beverageCount * 30;
     html += `
-      <div class="border-b pb-3 mb-3">
+      <div class="border-b border-gray-600 pb-3 mb-3">
         <div class="flex justify-between items-center">
-          <span class="font-semibold">${beverageCount}x Bebida</span>
-          <span class="font-bold">$${beverageTotal}</span>
+          <span class="font-semibold text-white">${beverageCount}x Bebida</span>
+          <span class="font-bold text-orange-400">$${beverageTotal}</span>
         </div>
       </div>
     `;
