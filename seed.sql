@@ -35,7 +35,7 @@ INSERT OR IGNORE INTO menu_items (category, name, base_ingredients, base_price) 
 INSERT OR IGNORE INTO menu_items (category, name, base_ingredients, base_price) VALUES
 ('hotdogs', 'Dogo de Pavo', 'Salchicha de Pavo', 50),
 ('hotdogs', 'Grosero', 'Salchicha para Asar+Q.Asadero+Tocino Rebanado', 60),
-('hotdogs', 'Asadero', 'Salchicha+Q.Asadero', 73),
+('hotdogs', 'Asadero', 'Salchicha+Q.Asadero', 63),
 ('hotdogs', 'Big Grosero', 'Grosero+Carnes Frías', 76),
 ('hotdogs', 'Choriqueso', 'Salchicha+Chorizo+Q.Asadero', 76),
 ('hotdogs', 'Champiqueso', 'Salchicha+Champiñones+Q.Asadero', 63),
